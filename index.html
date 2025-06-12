@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Remote Motor Controller Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; color: #333; }
+  .container { max-width: 900px; margin: 20px auto; background-color: #fff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); padding: 30px; }
+  h1 { text-align: center; color: #0056b3; margin-bottom: 30px; }
+  .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+  .data-card { background-color: #e9ecef; border-radius: 5px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+  .data-card label { font-weight: bold; color: #555; }
+  .data-card span { color: #007bff; font-size: 1.1em; }
+  .status-section, .faults-section { margin-top: 20px; padding: 20px; background-color: #e9ecef; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+  .status-section h2, .faults-section h2 { color: #0056b3; margin-top: 0; }
+  .status-list, .fault-list { list-style: none; padding: 0; margin: 0; }
+  .status-list li, .fault-list li { margin-bottom: 5px; display: flex; align-items: center; }
+  .status-list li::before { content: '✔'; color: green; margin-right: 8px; }
+  .fault-list li::before { content: '✖'; color: red; margin-right: 8px; }
+  .no-faults { color: green; font-weight: bold; }
+  .fault-active { color: red; font-weight: bold; }
+  .highlight-ready { color: green; font-weight: bold; }
+  .highlight-not-ready { color: orange; font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Remote Motor Controller Dashboard</h1>
+
+  <div class="data-grid">
+    <div class="data-card"><label>Motor ID:</label><span id="motorID">N/A</span></div>
+    <div class="data-card"><label>RPM:</label><span id="motorRPM">N/A</span></div>
+    <div class="data-card"><label>Throttle:</label><span id="throttlePercentage">N/A</span></div>
+    <div class="data-card"><label>Battery Voltage:</label><span id="batteryVoltage">N/A</span></div>
+    <div class="data-card"><label>Battery Current:</label><span id="batteryCurrent">N/A</span></div>
+    <div class="data-card"><label>AC Voltage:</label><span id="acVoltage">N/A</span></div>
+    <div class="data-card"><label>AC Current:</label><span id="acCurrent">N/A</span></div>
+    <div class="data-card"><label>MCU Temp:</label><span id="mcuTemperature">N/A</span></div>
+    <div class="data-card"><label>Motor Temp:</label><span id="motorTemperature">N/A</span></div>
+    <div class="data-card"><label>Vehicle Status:</label><span id="vehicleReadyStatus">N/A</span></div>
+  </div>
+
+  <div class="status-section">
+    <h2>Drive Status 1</h2>
+    <ul class="status-list" id="driveStatus1List">
+      <li>Low: <span id="ds1-low"></span></li>
+      <li>Medium: <span id="ds1-medium"></span></li>
+      <li>High: <span id="ds1-high"></span></li>
+      <li>Neutral: <span id="ds1-neutral"></span></li>
+      <li>Forward: <span id="ds1-forward"></span></li>
+      <li>Reverse: <span id="ds1-reverse"></span></li>
+      <li>Brake: <span id="ds1-brake"></span></li>
+      <li>Parking: <span id="ds1-parking"></span></li>
+    </ul>
+  </div>
+
+  <div class="status-section">
+    <h2>Drive Status 2</h2>
+    <ul class="status-list" id="driveStatus2List">
+      <li>Regen Brake: <span id="ds2-regen-brake"></span></li>
+      <li>Charging Status: <span id="ds2-charging-status"></span></li>
+      <li>Hill Assist Control: <span id="ds2-hill-assist"></span></li>
+      <li>Limp Home/Cut Back: <span id="ds2-limp-home"></span></li>
+    </ul>
+  </div>
+
+  <div class="faults-section">
+    <h2>MCU Faults</h2>
+    <ul class="fault-list" id="mcuFaultsList">
+      </ul>
+    <p id="noFaultsMessage" class="no-faults">No active faults</p>
+  </div>
+
+</div>
+
+<script>
+  // IMPORTANT: Replace this with the actual URL of your backend API
+  // This is the URL where your web page will FETCH the latest data from your server.
+  const API_URL = "https://your.domain.com/api/latest_motordata";
+
+  function fetchMotorData() {
+    fetch(API_URL)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data && data.status === 'success' && data.motorData) {
+            updateMotorData(data.motorData);
+        } else {
+            console.error("Failed to fetch motor data:", data.message || "Unknown error");
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching motor data:', error);
+      });
+  }
+
+  function updateMotorData(data) {
+    document.getElementById('motorID').innerText = data.motorID;
+    document.getElementById('motorRPM').innerText = `${data.motorRPM} RPM`;
+    document.getElementById('throttlePercentage').innerText = `${data.throttlePercentage}%`;
+    document.getElementById('batteryVoltage').innerText = `${data.batteryVoltage.toFixed(1)} V`;
+    document.getElementById('batteryCurrent').innerText = `${data.batteryCurrent.toFixed(1)} A`;
+    document.getElementById('acVoltage').innerText = `${data.acVoltage.toFixed(1)} V`;
+    document.getElementById('acCurrent').innerText = `${data.acCurrent.toFixed(1)} A`;
+    document.getElementById('mcuTemperature').innerText = `${data.mcuTemperature}°C`;
+    document.getElementById('motorTemperature').innerText = `${data.motorTemperature}°C`;
+
+    const vehicleStatusElement = document.getElementById('vehicleReadyStatus');
+    vehicleStatusElement.innerText = data.vehicleReadyStatus ? "Ready" : "Not Ready";
+    if (data.vehicleReadyStatus) {
+        vehicleStatusElement.classList.add('highlight-ready');
+        vehicleStatusElement.classList.remove('highlight-not-ready');
+    } else {
+        vehicleStatusElement.classList.add('highlight-not-ready');
+        vehicleStatusElement.classList.remove('highlight-ready');
+    }
+
+    // Update Drive Status 1
+    document.getElementById('ds1-low').innerText = (data.driveControlStatus1 & 0x01) ? 'Active' : 'Inactive';
+    document.getElementById('ds1-medium').innerText = (data.driveControlStatus1 & 0x02) ? 'Active' : 'Inactive';
+    document.getElementById('ds1-high').innerText = (data.driveControlStatus1 & 0x04) ? 'Active' : 'Inactive';
+    document.getElementById('ds1-neutral').innerText = (data.driveControlStatus1 & 0x08) ? 'Active' : 'Inactive';
+    document.getElementById('ds1-forward').innerText = (data.driveControlStatus1 & 0x10) ? 'Active' : 'Inactive';
+    document.getElementById('ds1-reverse').innerText = (data.driveControlStatus1 & 0x20) ? 'Active' : 'Inactive';
+    document.getElementById('ds1-brake').innerText = (data.driveControlStatus1 & 0x40) ? 'Active' : 'Inactive';
+    document.getElementById('ds1-parking').innerText = (data.driveControlStatus1 & 0x80) ? 'Active' : 'Inactive';
+
+    // Update Drive Status 2
+    document.getElementById('ds2-regen-brake').innerText = (data.driveControlStatus2 & 0x01) ? 'Active' : 'Inactive';
+    document.getElementById('ds2-charging-status').innerText = (data.driveControlStatus2 & 0x02) ? 'Active' : 'Inactive';
+    document.getElementById('ds2-hill-assist').innerText = (data.driveControlStatus2 & 0x04) ? 'Active' : 'Inactive';
+    document.getElementById('ds2-limp-home').innerText = (data.driveControlStatus2 & 0x08) ? 'Active' : 'Inactive';
+
+    // Update MCU Faults
+    const faultList = document.getElementById('mcuFaultsList');
+    faultList.innerHTML = ''; // Clear previous faults
+    let faultsFound = false;
+
+    const faults1 = {
+      0x01: "Controller Over Voltage",
+      0x02: "Controller Under Voltage",
+      0x04: "Motor Over Temperature",
+      0x08: "Controller Over Temperature",
+      0x10: "Throttle Error",
+      0x20: "Motor Stalling",
+      0x40: "Motor Locked Rotating",
+      0x80: "Motor Position Sensor Fault"
+    };
+    for (const bit in faults1) {
+      if (data.mcuFaults1 & parseInt(bit)) {
+        addFaultToList(faults1[bit]);
+        faultsFound = true;
+      }
+    }
+
+    const faults2 = {
+      0x01: "MCU Fault 1",
+      0x02: "Motor Encoder Fault",
+      0x04: "MCU Fault 2",
+      0x08: "Break Fault",
+      0x10: "Motor Start Fault",
+      0x20: "Motor Over Load"
+    };
+    for (const bit in faults2) {
+      if (data.mcuFaults2 & parseInt(bit)) {
+        addFaultToList(faults2[bit]);
+        faultsFound = true;
+      }
+    }
+
+    const faults3 = {
+      0x01: "MCU Fault 3",
+      0x02: "MCU Fault 4",
+      0x04: "MCU Fault 5",
+      0x08: "MCU Fault 6",
+      0x10: "MCU Fault 7",
+      0x20: "MCU Fault 8",
+      0x40: "MCU Fault 9",
+      0x80: "MCU Fault 10"
+    };
+    for (const bit in faults3) {
+      if (data.mcuFaults3 & parseInt(bit)) {
+        addFaultToList(faults3[bit]);
+        faultsFound = true;
+      }
+    }
+
+    document.getElementById('noFaultsMessage').style.display = faultsFound ? 'none' : 'block';
+  }
+
+  function addFaultToList(faultMessage) {
+    const faultList = document.getElementById('mcuFaultsList');
+    const listItem = document.createElement('li');
+    listItem.textContent = faultMessage;
+    listItem.classList.add('fault-active');
+    faultList.appendChild(listItem);
+  }
+
+  // Fetch data every 3 seconds (adjust as needed for real-time feel vs. data usage)
+  setInterval(fetchMotorData, 3000);
+
+  // Fetch initial data on page load
+  window.onload = fetchMotorData;
+</script>
+</body>
+</html>
